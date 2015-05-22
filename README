@@ -1,0 +1,25 @@
+Tyler Decker
+
+This is my program for analyzing the 1990 census data record.
+
+I use a custom writable data type for efficiency requiring me to only pass through a record once while mapping.
+This allows me to use the same mapper and combiner class for every question which is also another form of efficiency.
+
+My mapper class maps all of the raw data to BookRecord data type which is the value, and the Key is the state abbreviation and 
+then passes to the combiner.
+My combiner class takes all values in a Iterable<BookRecord> and adds them together getting the combination of all records into one 
+record for a state and then passes that record to the reducer.
+My reducer class then takes the record for each set of states that it has and computes the question statistics and writes the answer to 
+the context and finishes. 
+
+I have decided to only use one reducer as I have not notice a drastic difference in performance if I use more than one, It is also convenient
+because all answer for every state is in one file. The run time with one reducer is 1:20 - 2:00 min. If I used more than reducer I could possibly 
+get the runtime down to 20 to 30 seconds, for me that performance improvement in not needed for this project. Of course if the data set were scaled
+up larger then I would definately recommend using the multiple reducers, but at this state a 1:30 second wait is not bad at all.
+
+To run a job the command:
+~/cs455/Hadoop/Census/Hadoop-census$ $HADOOP_HOME/bin/hadoop jar dist/census.jar cs455.hadoop.census.mapreduce.CensusJobQ<number of job you want to perform> /data/census /home/cs455/census-output
+I have 8 jobs that follow the formula: CensusJobQ<number of job you want to perform>
+for example:
+~/cs455/Hadoop/Census/Hadoop-census$ $HADOOP_HOME/bin/hadoop jar dist/census.jar cs455.hadoop.census.mapreduce.CensusJobQ1 /data/census /home/cs455/census-output
+this command will run the first job which will answer question 1.

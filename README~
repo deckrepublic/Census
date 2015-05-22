@@ -1,0 +1,20 @@
+Tyler Decker
+
+This is my program for analyzing the 1990 census data record.
+
+I use a custom writable data type for efficiency requiring me to only pass through a record once while mapping.
+This allows me to use the same mapper and combiner class for every question which is also another form of efficiency.
+
+My mapper class maps all of the raw data to BookRecord data type which is the value, and the Key is the state abbreviation and 
+then passes to the combiner.
+My combiner class takes all values in a Iterable<BookRecord> and adds them together getting the combination of all records into one 
+record for a state and then passes that record to the reducer.
+My reducer class then takes the record for each set of states that it has and computes the question statistics and writes the answer to 
+the context and finishes. 
+
+I have decided to only use one reducer as I have not notice a drastic difference in performance if I use more than one, It is also convenient
+because all answer for every state is in one file. 
+
+Q1 I add togther the values for number of homes owned and rented then find the percentages based on that.
+Q2 I add together the values for males never married, married, seperated, and widowed then divide never married by the total number.
+Q3 I add together the values for all the ranges of age in gender, then find the appropiate range for both genders and divide to get percentages.

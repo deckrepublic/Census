@@ -1,0 +1,147 @@
+package cs455.hadoop.census.mapreduce;
+
+import org.apache.hadoop.mapreduce.Mapper;
+
+import cs455.hadoop.census.record.*;
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+
+/**
+ * Mapper: Reads line by line. Emit <My custom data type BookRecord, 1> pairs.
+ */
+public class CensusMapper extends Mapper<LongWritable, Text, Text, BookRecord> {
+
+	//Book record that gets written to the context
+	private static BookRecord theRecord = null; //the actual book of records we need to write to the context
+	
+	private static BookData theData = null; //the data initializer for BookRecord constructor
+	private static Population thePopulation = null; //initializer for BookData constructor
+	private static MaritalStatus theMaritalStatus = null; //initializer for BookData constructor
+	private static Tenure theTenure = null; //initializer for BookRecord constructor
+
+	//parse a record line
+	public static void parseLine(String line){
+		//get summary level and record part
+		int summarylevel = Integer.parseInt(line.substring(10, 13));
+		int recordpart = Integer.parseInt(line.substring(24, 28));
+		//first record starting indices for knowledge extraction
+		int population_index = 300;
+		int popurbanvsrural_index = 327;
+		int sex_index = 363;
+		int age_index = 795;
+		int agebygender_index = 3864;
+		int genderbymaritalstatus_index = 4422;
+		//second record starting indices for knowledge extraction
+		int tenure_index = 1803;
+		int houseurbanvsrural_index = 1857;
+		int rooms_index = 2388;
+		int value_index = 2928;
+		int contract_index = 3450;
+		
+		//check the level
+		if(summarylevel == 100){
+			//parse in form of expecting first part of record
+			if(recordpart == 1){	
+				//go through and initialize IntWritables for every field in the population class
+				IntWritable population = new IntWritable(Integer.parseInt(line.substring(population_index, population_index + 9)));
+				IntWritable [] popurbanvsrural = new IntWritable[2];
+				//set for each field in the IntWritable []
+				for(int i = 0; i < popurbanvsrural.length; i++){
+					popurbanvsrural[i] = new IntWritable(Integer.parseInt(line.substring(popurbanvsrural_index, popurbanvsrural_index + 9)));
+					popurbanvsrural_index += 9; //increase index to get all information
+				}
+				IntWritable [] sex = new IntWritable[2];
+				for(int i = 0; i < sex.length; i++){
+					sex[i] = new IntWritable(Integer.parseInt(line.substring(sex_index, sex_index + 9)));
+					sex_index += 9; //increase index to get all information
+				}
+				IntWritable [] age = new IntWritable[31];
+				for(int i = 0; i < age.length; i++){
+					age[i] = new IntWritable(Integer.parseInt(line.substring(age_index, age_index + 9)));
+					age_index += 9; //increase index to get all information
+				}
+				IntWritable [][] agebygender = new IntWritable[2][31];
+				for(int i = 0; i < agebygender.length; i++){
+					for(int j = 0; j < agebygender[i].length; j++){
+						agebygender[i][j] = new IntWritable(Integer.parseInt(line.substring(agebygender_index, agebygender_index + 9)));
+						agebygender_index += 9; //increase index to get all information, index still applies to female part
+					}
+				}
+				thePopulation = new Population(population, popurbanvsrural, sex, age, agebygender); //we have all fields needed for population so we initialize
+				//marital status is in same record part as population so we need to initialize that as well
+				IntWritable [] malemaritalstatus = new IntWritable[4];
+				for(int i = 0; i < malemaritalstatus.length; i++){
+					malemaritalstatus[i] = new IntWritable(Integer.parseInt(line.substring(genderbymaritalstatus_index, genderbymaritalstatus_index + 9)));
+					genderbymaritalstatus_index += 9; //increase index to get all information
+				}
+				IntWritable [] femalemaritalstatus = new IntWritable[4];
+				for(int i = 0; i < femalemaritalstatus.length; i++){
+					femalemaritalstatus[i] = new IntWritable(Integer.parseInt(line.substring(genderbymaritalstatus_index, genderbymaritalstatus_index + 9)));
+					genderbymaritalstatus_index += 9; //we reuse this index due to being in same part
+				}
+				theMaritalStatus = new MaritalStatus(malemaritalstatus, femalemaritalstatus); //we have all fields needed for MaritalStatus so we initialize
+				//we are now done with part 1 of the record
+			}
+			//parse in form of expecting second part of record
+			else if(recordpart == 2){
+				IntWritable [] occupied = new IntWritable[2];
+				for(int i = 0; i < occupied.length; i++){
+					occupied[i] = new IntWritable(Integer.parseInt(line.substring(tenure_index, tenure_index + 9)));
+					tenure_index += 9; //increase index to get all information
+				}
+				IntWritable [] houseurbanvsrural = new IntWritable[4];
+				for(int i = 0; i < houseurbanvsrural.length; i++){
+					houseurbanvsrural[i] = new IntWritable(Integer.parseInt(line.substring(houseurbanvsrural_index, houseurbanvsrural_index + 9)));
+					houseurbanvsrural_index += 9; //we reuse this index due to being in same part
+				}
+				IntWritable [] rooms = new IntWritable[9];
+				for(int i = 0; i < rooms.length; i++){
+					rooms[i] = new IntWritable(Integer.parseInt(line.substring(rooms_index, rooms_index + 9)));
+					rooms_index += 9; //increase index to get all information
+				}
+				IntWritable [] value = new IntWritable[20];
+				for(int i = 0; i < value.length; i++){
+					value[i] = new IntWritable(Integer.parseInt(line.substring(value_index, value_index + 9)));
+					value_index += 9; //we reuse this index due to being in same part
+				}
+				IntWritable [] contract = new IntWritable[17];
+				for(int i = 0; i < contract.length; i++){
+					contract[i] = new IntWritable(Integer.parseInt(line.substring(contract_index, contract_index + 9)));
+					contract_index += 9; //we reuse this index due to being in same part
+				}
+				theTenure = new Tenure(occupied, houseurbanvsrural, rooms, value, contract); //we have all fields needed for Tenure so we initialize
+				//we are now done with part 2 of the record
+			}
+			//in case the record has more than two parts and is not part 1 or 2, then do nothing.
+			else{/*do nothing*/} 
+		}
+		else{/*do nothing if summary level is not 100*/}
+	}
+
+    @Override
+    protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+        // get line from file which is a record part
+        String record = value.toString();
+
+	parseLine(record);
+	//after parsing each line check if a book data is ready to be created and assimilated into a record
+	if(thePopulation != null && theMaritalStatus != null && theTenure != null){
+		theData = new BookData(thePopulation, theMaritalStatus, theTenure); //create the data for the record
+		theRecord = new BookRecord(new Text(record.substring(8,10)), new IntWritable(Integer.parseInt(record.substring(18,24))), theData); //now create the record that we can write
+					
+		//write to context 
+		context.write(theRecord.getKey(), theRecord);
+		System.out.println(thePopulation.getUrbanRural()[1].get());			
+		//now we need to reset all the fields so that we can create new records to write to context
+		thePopulation = null;
+		theMaritalStatus = null;
+		theTenure = null;
+		theData = null;
+		theRecord = null;
+	}
+    }
+}
